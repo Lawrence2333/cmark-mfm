@@ -4,6 +4,7 @@ add_library(libcmark-gfm-extensions
   ext_scanners.c
   ext_scanners.h
   ext_scanners.re
+  ragtag.c
   strikethrough.c
   table.c
   tagfilter.c
