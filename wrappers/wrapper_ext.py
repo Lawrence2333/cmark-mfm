@@ -33,6 +33,7 @@ EXTENSIONS = (
   'autolink',
   'table',
   'strikethrough',
+  'ragtag',
   'tagfilter',
   )
 
