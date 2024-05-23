@@ -9,76 +9,79 @@ cmark_node_type CMARK_NODE_RAGTAG;
 static cmark_node *match(cmark_syntax_extension *self, cmark_parser *parser,
                          cmark_node *parent, unsigned char character,
                          cmark_inline_parser *inline_parser) {
-  cmark_node *res = NULL;
-  int left_flanking, right_flanking, punct_before, punct_after, delims;
-  char buffer[101];
-
-  if (character != '^')
-    return NULL;
-
-  delims = cmark_inline_parser_scan_delimiters(
-      inline_parser, sizeof(buffer) - 1, '^',
-      &left_flanking,
-      &right_flanking, &punct_before, &punct_after);
-
-  memset(buffer, '^', delims);
-  buffer[delims] = 0;
-
-  res = cmark_node_new_with_mem(CMARK_NODE_TEXT, parser->mem);
-  cmark_node_set_literal(res, buffer);
-  res->start_line = res->end_line = cmark_inline_parser_get_line(inline_parser);
-  res->start_column = cmark_inline_parser_get_column(inline_parser) - delims;
-
-  if ((left_flanking || right_flanking) && delims == 2) {
-    cmark_inline_parser_push_delimiter(inline_parser, character, left_flanking,
-                                       right_flanking, res);
-  }
-
-  return res;
-}
-
-static delimiter *insert(cmark_syntax_extension *self, cmark_parser *parser,
-                         cmark_inline_parser *inline_parser, delimiter *opener,
-                         delimiter *closer) {
   cmark_node *ragtag;
-  cmark_node *tmp, *next;
-  delimiter *delim, *tmp_delim;
-  delimiter *res = closer->next;
+  int column = cmark_inline_parser_get_column(inline_parser);
+  int offset = cmark_inline_parser_get_offset(inline_parser);
+  unsigned char cur_char = cmark_inline_parser_peek_at(inline_parser, offset);
+  char buffer[31]; // 30 digits
 
-  ragtag = opener->inl_text;
+  // hack, starts from ^
+  if (cur_char != '^') {
+    return NULL;
+  }
 
-  if (opener->inl_text->as.literal.len != closer->inl_text->as.literal.len)
-    goto done;
+  // then we see if there's a [ before ^
+  unsigned char before_char = cmark_inline_parser_peek_at(inline_parser, offset - 1);
+  if (before_char != '[') {
+    return NULL;
+  }
 
-  if (!cmark_node_set_type(ragtag, CMARK_NODE_RAGTAG))
-    goto done;
+  // start finding the closing ^]
+  int seeker = offset + 1;
+  while (seeker <= offset + 30 && cmark_inline_parser_peek_at(inline_parser, seeker) != '^') {
+    unsigned char c = cmark_inline_parser_peek_at(inline_parser, seeker);
+    if (c < '0' || c > '9') { // numbers only
+      cmark_inline_parser_set_offset(inline_parser, offset);
+      return NULL;
+    }
+    int index = seeker - offset - 1;
+    memset(buffer + index, c, 1);
+    seeker++;
+  }
+  int len_of_content = seeker - offset - 1;
+  buffer[len_of_content] = 0; // end of buffer
 
+  // found ^, then ]
+  unsigned char after_char = cmark_inline_parser_peek_at(inline_parser, seeker + 1);
+  if (after_char != ']') {
+    return NULL;
+  }
+
+  // found everything,
+  // before we create the node, we should pop the opening [ bracket
+  if (cmark_inline_parser_in_bracket(inline_parser, 0)
+     || cmark_inline_parser_in_bracket(inline_parser, 1)
+     || cmark_inline_parser_in_bracket(inline_parser, 2)) {
+    cmark_inline_parser_free_last_bracket(inline_parser);
+    cmark_inline_parser_pop_bracket(inline_parser);
+  }
+
+  // advance to the character after ]
+  cmark_inline_parser_set_offset(inline_parser, seeker + 2);
+
+ // create the text node within
+  cmark_node *text = cmark_node_new_with_mem(CMARK_NODE_TEXT, parser->mem);
+  // .. with all text between [^ and ^]
+  cmark_node_set_string_content(text, buffer);
+  cmark_node_set_literal(text, buffer);
+  text->start_line = text->end_line = cmark_inline_parser_get_line(inline_parser);
+  text->start_column = column + 1;
+  text->end_column = text->start_column + len_of_content;
+
+  // create the ragtag node
+  ragtag = cmark_node_new_with_mem(CMARK_NODE_RAGTAG, parser->mem);
+  if (!cmark_node_set_type(ragtag, CMARK_NODE_RAGTAG)) {
+    return NULL;
+  }
   cmark_node_set_syntax_extension(ragtag, self);
+  ragtag->start_line = ragtag->end_line = cmark_inline_parser_get_line(inline_parser);
+  int len_of_tag = len_of_content + 4/*[^^]*/;
+  ragtag->start_column = column - 1;
+  ragtag->end_column = ragtag->start_column + len_of_tag;
 
-  tmp = cmark_node_next(opener->inl_text);
+  cmark_node_append_child(ragtag, text);
 
-  while (tmp) {
-    if (tmp == closer->inl_text)
-      break;
-    next = cmark_node_next(tmp);
-    cmark_node_append_child(ragtag, tmp);
-    tmp = next;
-  }
-
-  ragtag->end_column = closer->inl_text->start_column + closer->inl_text->as.literal.len - 1;
-  cmark_node_free(closer->inl_text);
-
-done:
-  delim = closer;
-  while (delim != NULL && delim != opener) {
-    tmp_delim = delim->previous;
-    cmark_inline_parser_remove_delimiter(inline_parser, delim);
-    delim = tmp_delim;
-  }
-
-  cmark_inline_parser_remove_delimiter(inline_parser, opener);
-
-  return res;
+  return ragtag;
 }
 
 static const char *get_type_string(cmark_syntax_extension *extension,
@@ -97,31 +100,11 @@ static int can_contain(cmark_syntax_extension *extension, cmark_node *node,
 static void commonmark_render(cmark_syntax_extension *extension,
                               cmark_renderer *renderer, cmark_node *node,
                               cmark_event_type ev_type, int options) {
-  renderer->out(renderer, node, "^^", false, LITERAL);
-}
-
-static void latex_render(cmark_syntax_extension *extension,
-                         cmark_renderer *renderer, cmark_node *node,
-                         cmark_event_type ev_type, int options) {
-  // requires \usepackage{ulem}
   bool entering = (ev_type == CMARK_EVENT_ENTER);
   if (entering) {
-    renderer->out(renderer, node, "\\sout{", false, LITERAL);
+    renderer->out(renderer, node, "[^", false, LITERAL);
   } else {
-    renderer->out(renderer, node, "}", false, LITERAL);
-  }
-}
-
-static void man_render(cmark_syntax_extension *extension,
-                       cmark_renderer *renderer, cmark_node *node,
-                       cmark_event_type ev_type, int options) {
-  bool entering = (ev_type == CMARK_EVENT_ENTER);
-  if (entering) {
-    renderer->cr(renderer);
-    renderer->out(renderer, node, ".ST \"", false, LITERAL);
-  } else {
-    renderer->out(renderer, node, "\"", false, LITERAL);
-    renderer->cr(renderer);
+    renderer->out(renderer, node, "^]", false, LITERAL);
   }
 }
 
@@ -139,7 +122,6 @@ static void html_render(cmark_syntax_extension *extension,
 static void plaintext_render(cmark_syntax_extension *extension,
                              cmark_renderer *renderer, cmark_node *node,
                              cmark_event_type ev_type, int options) {
-  renderer->out(renderer, node, "^", false, LITERAL);
   bool entering = (ev_type == CMARK_EVENT_ENTER);
   if (entering) {
     renderer->out(renderer, node, "[^", false, LITERAL);
@@ -150,27 +132,17 @@ static void plaintext_render(cmark_syntax_extension *extension,
 
 cmark_syntax_extension *create_ragtag_extension(void) {
   cmark_syntax_extension *ext = cmark_syntax_extension_new("ragtag");
-  cmark_llist *special_chars = NULL;
 
   cmark_syntax_extension_set_get_type_string_func(ext, get_type_string);
   cmark_syntax_extension_set_can_contain_func(ext, can_contain);
 
   cmark_syntax_extension_set_commonmark_render_func(ext, commonmark_render);
-  cmark_syntax_extension_set_latex_render_func(ext, latex_render);
-  cmark_syntax_extension_set_man_render_func(ext, man_render);
   cmark_syntax_extension_set_html_render_func(ext, html_render);
   cmark_syntax_extension_set_plaintext_render_func(ext, plaintext_render);
 
   CMARK_NODE_RAGTAG = cmark_syntax_extension_add_node(1);
 
   cmark_syntax_extension_set_match_inline_func(ext, match);
-  cmark_syntax_extension_set_inline_from_delim_func(ext, insert);
-
-  cmark_mem *mem = cmark_get_default_mem_allocator();
-  special_chars = cmark_llist_append(mem, special_chars, (void *)'^');
-  cmark_syntax_extension_set_special_inline_chars(ext, special_chars);
-
-  cmark_syntax_extension_set_emphasis(ext, 1);
 
   return ext;
 }

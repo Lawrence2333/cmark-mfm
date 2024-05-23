@@ -643,6 +643,14 @@ struct cmark_chunk *cmark_inline_parser_get_chunk(cmark_inline_parser *parser);
 CMARK_GFM_EXPORT
 int cmark_inline_parser_in_bracket(cmark_inline_parser *parser, int type);
 
+/** Free the last bracket on the stack, would be better do it before poping */
+CMARK_GFM_EXPORT
+void cmark_inline_parser_free_last_bracket(cmark_inline_parser *parser);
+
+/** Pop the last bracket off the stack */
+CMARK_GFM_EXPORT
+void cmark_inline_parser_pop_bracket(cmark_inline_parser *parser);
+
 /** Remove the last n characters from the last child of the given node.
  * This only works where all n characters are in the single last child, and the last
  * child is CMARK_NODE_TEXT.

@@ -1993,6 +1993,14 @@ int cmark_inline_parser_in_bracket(cmark_inline_parser *parser, int type) {
   }
 }
 
+void cmark_inline_parser_free_last_bracket(cmark_inline_parser *parser) {
+  cmark_node_free(parser->last_bracket->inl_text);
+}
+
+void cmark_inline_parser_pop_bracket(cmark_inline_parser *parser) {
+  pop_bracket(parser);
+}
+
 void cmark_node_unput(cmark_node *node, int n) {
 	node = node->last_child;
 	while (n > 0 && node && node->type == CMARK_NODE_TEXT) {
