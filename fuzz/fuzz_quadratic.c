@@ -12,6 +12,7 @@ const char *extension_names[] = {
   "autolink",
   "ragtag",
   "strikethrough",
+  "math",
   "table",
   "tagfilter",
   NULL,
