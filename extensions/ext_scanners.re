@@ -35,6 +35,10 @@ bufsize_t _ext_scan_at(bufsize_t (*scanner)(const unsigned char *), unsigned cha
   table_cell = (escaped_char|[^|\r\n])+;
 
   tasklist = spacechar*("-"|"+"|"*"|[0-9]+.)spacechar+("[ ]"|"[x]")spacechar+;
+
+  anychar = .;
+  math_opener = spacechar*("$"|"$$"|"\\("|"\\["); // $ or $$ or \( or \[
+  math_closer = ("$"|"$$"|"\\)"|"\\]")spacechar*; // $ or $$ or \) or \]
 */
 
 bufsize_t _scan_table_start(const unsigned char *p)
@@ -87,6 +91,26 @@ bufsize_t _scan_tasklist(const unsigned char *p)
   const unsigned char *start = p;
   /*!re2c
     tasklist { return (bufsize_t)(p - start); }
+    * { return 0; }
+  */
+}
+
+bufsize_t _scan_math_start(const unsigned char *p)
+{
+  const unsigned char *marker = NULL;
+  const unsigned char *start = p;
+  /*!re2c
+    math_opener { return (bufsize_t)(p - start); }
+    * { return 0; }
+  */
+}
+
+bufsize_t _scan_math_end(const unsigned char *p)
+{
+  const unsigned char *marker = NULL;
+  const unsigned char *start = p;
+  /*!re2c
+    anychar* math_closer { return (bufsize_t)(p - start); }
     * { return 0; }
   */
 }

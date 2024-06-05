@@ -4,6 +4,7 @@
 #include "node.h"
 #include "strikethrough.h"
 #include "ragtag.h"
+#include "math.h"
 #include "table.h"
 #include "tagfilter.h"
 #include "tasklist.h"
@@ -15,6 +16,7 @@ static int core_extensions_registration(cmark_plugin *plugin) {
   cmark_plugin_register_syntax_extension(plugin,
                                          create_strikethrough_extension());
   cmark_plugin_register_syntax_extension(plugin, create_ragtag_extension());
+  cmark_plugin_register_syntax_extension(plugin, create_math_extension());
   cmark_plugin_register_syntax_extension(plugin, create_autolink_extension());
   cmark_plugin_register_syntax_extension(plugin, create_tagfilter_extension());
   cmark_plugin_register_syntax_extension(plugin, create_tasklist_extension());
