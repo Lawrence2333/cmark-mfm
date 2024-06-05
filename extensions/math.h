@@ -3,7 +3,7 @@
 
 #include "cmark-gfm-core-extensions.h"
 
-extern cmark_node_type CMARK_NODE_MATH;
+extern cmark_node_type CMARK_NODE_MATH_BLOCK;
 cmark_syntax_extension *create_math_extension(void);
 
 #endif

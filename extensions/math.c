@@ -10,7 +10,7 @@
 #include <render.h>
 #include "ext_scanners.h"
 
-cmark_node_type CMARK_NODE_MATH;
+cmark_node_type CMARK_NODE_MATH_BLOCK;
 
 static void scan_math_start_or_end(unsigned char *input, bufsize_t len, bufsize_t *start_offset, bufsize_t *end_offset) {
   bufsize_t start = scan_math_start(input, len, 0);
@@ -54,7 +54,7 @@ static int matches(cmark_syntax_extension *self, cmark_parser *parser,
                    unsigned char *input, int len,
                    cmark_node *parent_container) {
   cmark_node_type node_type = cmark_node_get_type(parent_container);
-  if (node_type != CMARK_NODE_MATH) {
+  if (node_type != CMARK_NODE_MATH_BLOCK) {
     return 0;
   }
   bool found_end = false;
@@ -69,7 +69,7 @@ static cmark_node *open_math_block(cmark_syntax_extension *self,
   cmark_node *container = parent_container;
   while (container) {
     cmark_node_type parent_type = cmark_node_get_type(container);
-    if (parent_type == CMARK_NODE_MATH) {
+    if (parent_type == CMARK_NODE_MATH_BLOCK) {
       return NULL;
     }
     container = container->parent;
@@ -85,7 +85,7 @@ static cmark_node *open_math_block(cmark_syntax_extension *self,
 
   cmark_node *math_block = NULL;
   if (start_offset) {
-    math_block = cmark_parser_add_child(parser, parent_container, CMARK_NODE_MATH, parent_container->start_column);
+    math_block = cmark_parser_add_child(parser, parent_container, CMARK_NODE_MATH_BLOCK, parent_container->start_column);
     cmark_node_set_syntax_extension(math_block, self);
 
     handle_math_block_content(math_block, parser, input, len, start_offset, NULL);
@@ -108,12 +108,12 @@ static cmark_node *open_math_block(cmark_syntax_extension *self,
 
 static const char *get_type_string(cmark_syntax_extension *extension,
                                    cmark_node *node) {
-  return node->type == CMARK_NODE_MATH ? "math_block" : "<unknown>";
+  return node->type == CMARK_NODE_MATH_BLOCK ? "math_block" : "<unknown>";
 }
 
 static int can_contain(cmark_syntax_extension *extension, cmark_node *node,
                        cmark_node_type child_type) {
-  return node->type == CMARK_NODE_MATH && child_type == CMARK_NODE_PARAGRAPH;
+  return node->type == CMARK_NODE_MATH_BLOCK && child_type == CMARK_NODE_PARAGRAPH;
 }
 
 //
@@ -168,7 +168,7 @@ cmark_syntax_extension *create_math_extension(void) {
   cmark_syntax_extension_set_html_render_func(ext, html_render);
   cmark_syntax_extension_set_plaintext_render_func(ext, plaintext_render);
 
-  CMARK_NODE_MATH = cmark_syntax_extension_add_node(0);
+  CMARK_NODE_MATH_BLOCK = cmark_syntax_extension_add_node(0);
 
   // cmark_syntax_extension_set_match_inline_func(ext, match);
 
