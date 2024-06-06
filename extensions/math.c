@@ -125,10 +125,11 @@ static void commonmark_render(cmark_syntax_extension *extension,
                               cmark_event_type ev_type, int options) {
   bool entering = (ev_type == CMARK_EVENT_ENTER);
   if (entering) {
-    renderer->out(renderer, node, "$$", false, LITERAL);
-  } else {
-    renderer->out(renderer, node, "$$", false, LITERAL);
+     return;
   }
+  renderer->out(renderer, node, "$$", false, LITERAL);
+  renderer->out(renderer, node, (char *)node->content.ptr, false, LITERAL);
+  renderer->out(renderer, node, "$$\n", false, LITERAL);
 }
 
 static void html_render(cmark_syntax_extension *extension,
@@ -148,10 +149,11 @@ static void plaintext_render(cmark_syntax_extension *extension,
                              cmark_event_type ev_type, int options) {
   bool entering = (ev_type == CMARK_EVENT_ENTER);
   if (entering) {
-    renderer->out(renderer, node, "$$", false, LITERAL);
-  } else {
-    renderer->out(renderer, node, "$$", false, LITERAL);
+     return;
   }
+  renderer->out(renderer, node, "$$", false, LITERAL);
+  renderer->out(renderer, node, (char *)node->content.ptr, false, LITERAL);
+  renderer->out(renderer, node, "$$\n", false, LITERAL);
 }
 
 cmark_syntax_extension *create_math_extension(void) {
