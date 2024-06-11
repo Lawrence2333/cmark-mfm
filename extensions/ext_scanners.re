@@ -1,5 +1,5 @@
-/*!re2c re2c:flags:no-debug-info = 1; */
 /*!re2c re2c:indent:string = '  '; */
+/*!maxnmatch:re2c*/
 
 #include <stdlib.h>
 #include "ext_scanners.h"
@@ -38,7 +38,7 @@ bufsize_t _ext_scan_at(bufsize_t (*scanner)(const unsigned char *), unsigned cha
 
   anychar = .;
   math_opener = spacechar*("\\("|"\\["); // \( or \[
-  math_closer = ("$"|"$$"|"\\)"|"\\]")spacechar*; // $ or $$ or \) or \]
+  math_closer = ("\\)"|"\\]")spacechar*; // \) or \]
 */
 
 bufsize_t _scan_table_start(const unsigned char *p)

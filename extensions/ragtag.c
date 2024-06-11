@@ -58,8 +58,7 @@ static cmark_node *match(cmark_syntax_extension *self, cmark_parser *parser,
 
   // advance to the character after ]
   cmark_inline_parser_set_offset(inline_parser, seeker + 2);
-
- // create the text node within
+  // create the text node within
   cmark_node *text = cmark_node_new_with_mem(CMARK_NODE_TEXT, parser->mem);
   // .. with all text between [^ and ^]
   cmark_node_set_string_content(text, buffer);
