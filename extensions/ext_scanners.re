@@ -37,7 +37,7 @@ bufsize_t _ext_scan_at(bufsize_t (*scanner)(const unsigned char *), unsigned cha
   tasklist = spacechar*("-"|"+"|"*"|[0-9]+.)spacechar+("[ ]"|"[x]")spacechar+;
 
   anychar = .;
-  math_opener = spacechar*("$"|"$$"|"\\("|"\\["); // $ or $$ or \( or \[
+  math_opener = spacechar*("\\("|"\\["); // \( or \[
   math_closer = ("$"|"$$"|"\\)"|"\\]")spacechar*; // $ or $$ or \) or \]
 */
 

@@ -12,13 +12,29 @@
 
 cmark_node_type CMARK_NODE_MATH;
 
+static void scan_math_start_or_end(unsigned char *input, bufsize_t len, bufsize_t *start_offset, bufsize_t *end_offset) {
+  bufsize_t start = scan_math_start(input, len, 0);
+  bufsize_t end = scan_math_end(input, len, start);
+  if (end) {
+    end = end + start;
+  }
+  if (start_offset) {
+    *start_offset = start;
+  }
+  if (end_offset) {
+    *end_offset = end;
+  }
+}
+
 static void handle_math_block_content(cmark_node *math_block, 
                                       cmark_parser *parser,
                                       unsigned char *input,
                                       int len,
                                       int start_offset,
                                       bool *found_end) {
-  bufsize_t end_offset = scan_math_end(input, len, 0);
+  bufsize_t end_offset;
+  scan_math_start_or_end(input, len, NULL, &end_offset);
+
   if (end_offset) {
     cmark_strbuf content;
     cmark_strbuf_init(parser->mem, &content, 0);
@@ -59,8 +75,9 @@ static cmark_node *open_math_block(cmark_syntax_extension *self,
     container = container->parent;
   }
 
-  bufsize_t start_offset = scan_math_start(input, len, 0);
-  bufsize_t end_offset = scan_math_end(input, len, 0);
+  bufsize_t start_offset;
+  bufsize_t end_offset;
+  scan_math_start_or_end(input, len, &start_offset, &end_offset);
 
   if (!start_offset && !end_offset) {
     return NULL;
@@ -108,10 +125,11 @@ static void commonmark_render(cmark_syntax_extension *extension,
                               cmark_event_type ev_type, int options) {
   bool entering = (ev_type == CMARK_EVENT_ENTER);
   if (entering) {
-    renderer->out(renderer, node, "$$", false, LITERAL);
-  } else {
-    renderer->out(renderer, node, "$$", false, LITERAL);
+     return;
   }
+  renderer->out(renderer, node, "$$", false, LITERAL);
+  renderer->out(renderer, node, (char *)node->content.ptr, false, LITERAL);
+  renderer->out(renderer, node, "$$\n", false, LITERAL);
 }
 
 static void html_render(cmark_syntax_extension *extension,
@@ -131,10 +149,11 @@ static void plaintext_render(cmark_syntax_extension *extension,
                              cmark_event_type ev_type, int options) {
   bool entering = (ev_type == CMARK_EVENT_ENTER);
   if (entering) {
-    renderer->out(renderer, node, "$$", false, LITERAL);
-  } else {
-    renderer->out(renderer, node, "$$", false, LITERAL);
+     return;
   }
+  renderer->out(renderer, node, "$$", false, LITERAL);
+  renderer->out(renderer, node, (char *)node->content.ptr, false, LITERAL);
+  renderer->out(renderer, node, "$$\n", false, LITERAL);
 }
 
 cmark_syntax_extension *create_math_extension(void) {
