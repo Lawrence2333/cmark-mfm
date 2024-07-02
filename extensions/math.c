@@ -84,6 +84,11 @@ static cmark_node *open_math_block(cmark_syntax_extension *self,
     return NULL;
   }
 
+  // both start and end are in the same line, skip it, let inline-math to handle
+  if (start_offset && end_offset) {
+    return NULL;
+  }
+
   cmark_node *math_block = NULL;
   if (start_offset) {
     math_block = cmark_parser_add_child(parser, parent_container, CMARK_NODE_MATH_BLOCK, parent_container->start_column);
@@ -92,16 +97,9 @@ static cmark_node *open_math_block(cmark_syntax_extension *self,
     handle_math_block_content(math_block, parser, input, len, start_offset, NULL);
   }
   
+  // found the end fence, create a new paragraph to close math-block and receive following lines
   if (end_offset) {
-    cmark_node *new_para;
-    if (math_block) {
-      // single line, use the same parent to close math properly
-      new_para = cmark_parser_add_child(parser, math_block->parent, CMARK_NODE_PARAGRAPH, parent_container->start_column);
-    } else {
-      // multi line, create a new paragraph to close math
-      new_para = cmark_parser_add_child(parser, parent_container, CMARK_NODE_PARAGRAPH, parent_container->start_column);
-    }
-    return new_para;
+    return cmark_parser_add_child(parser, parent_container, CMARK_NODE_PARAGRAPH, parent_container->start_column);
   }
 
   return math_block;
