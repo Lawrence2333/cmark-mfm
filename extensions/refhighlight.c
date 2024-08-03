@@ -6,6 +6,8 @@
 
 cmark_node_type CMARK_NODE_REFHIGHLIGHT;
 
+static int max_length = 2000;
+
 static cmark_node *match(cmark_syntax_extension *self, cmark_parser *parser,
                          cmark_node *parent, unsigned char character,
                          cmark_inline_parser *inline_parser) {
@@ -13,7 +15,7 @@ static cmark_node *match(cmark_syntax_extension *self, cmark_parser *parser,
   int column = cmark_inline_parser_get_column(inline_parser);
   int offset = cmark_inline_parser_get_offset(inline_parser);
   unsigned char cur_char = cmark_inline_parser_peek_at(inline_parser, offset);
-  char buffer[300]; // 30 digits
+  char buffer[max_length];
 
   // hack, starts from $
   if (cur_char != '$') {
@@ -28,7 +30,7 @@ static cmark_node *match(cmark_syntax_extension *self, cmark_parser *parser,
 
   // start finding the closing $]
   int seeker = offset + 1;
-  while (seeker <= offset + 300 && cmark_inline_parser_peek_at(inline_parser, seeker) != '$') {
+  while (seeker <= offset + max_length - 1 && cmark_inline_parser_peek_at(inline_parser, seeker) != '$') {
     unsigned char c = cmark_inline_parser_peek_at(inline_parser, seeker);
 //    if (c < '0' || c > '9') { // numbers only
 //      cmark_inline_parser_set_offset(inline_parser, offset);
